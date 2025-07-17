@@ -28,7 +28,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["prompt-module.html", "prompt-module.css", "prompt-module.js"],
+      "resources": ["ai-service.js"],
       "matches": ["<all_urls>"]
     }
   ],

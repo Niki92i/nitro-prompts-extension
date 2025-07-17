@@ -41,13 +41,32 @@
           <span id="transparencyValue">80%</span>
         </div>
 
-        <div class="setting-item">
+        <div class="setting-group">
           <label for="moduleSize">Module Size:</label>
-          <select id="moduleSize" class="setting-select">
+          <select id="moduleSize">
             <option value="small">Small</option>
-            <option value="medium" selected>Medium</option>
+            <option value="medium">Medium</option>
             <option value="large">Large</option>
           </select>
+        </div>
+
+        <div class="setting-group">
+          <label for="geminiApiKey">Gemini API Key (Optional):</label>
+          <div style="font-size: 11px; color: #666; margin-bottom: 5px;">
+            💡 Tip: Paste your API key in the box below, then click "Save Key"
+          </div>
+          <textarea id="geminiApiKey" class="api-key-textarea" placeholder="Paste your Gemini API key here..." rows="3" autocomplete="off" spellcheck="false"></textarea>
+          <small>Get free API key from <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a></small>
+          <div style="margin-top: 8px;">
+            <button id="saveApiKey" class="btn-small paste-btn">Save Key</button>
+            <button id="clearApiKey" class="btn-small">Clear Key</button>
+            <button id="testApiKey" class="btn-small" style="background: #ffc107;">Test Field</button>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <button id="testAI" class="btn-secondary">Test AI Connection</button>
+          <div id="aiStatus" class="status-indicator"></div>
         </div>
       </div>
 

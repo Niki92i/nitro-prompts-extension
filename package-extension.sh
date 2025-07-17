@@ -19,8 +19,10 @@ cp settings.js dist/nitro-prompts-extension/
 cp settings.css dist/nitro-prompts-extension/
 cp welcome.html dist/nitro-prompts-extension/
 cp welcome.css dist/nitro-prompts-extension/
+cp ai-service.js dist/nitro-prompts-extension/
 cp README.md dist/nitro-prompts-extension/
 cp INSTALLATION.md dist/nitro-prompts-extension/
+cp GEMINI_SETUP.md dist/nitro-prompts-extension/
 
 # Copy icons (if they exist)
 if [ -d "icons" ]; then

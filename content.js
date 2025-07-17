@@ -6,6 +6,7 @@ class NitroPromptsModule {
     this.isVisible = false;
     this.isDragging = false;
     this.dragOffset = { x: 0, y: 0 };
+    this.aiService = null;
     
     this.init();
   }
@@ -13,6 +14,9 @@ class NitroPromptsModule {
   async init() {
     // Load settings
     await this.loadSettings();
+    
+    // Initialize AI service
+    this.initAIService();
     
     // Create and inject module
     this.createModule();
@@ -29,6 +33,36 @@ class NitroPromptsModule {
     }
   }
 
+  async initAIService() {
+    // Load AI service script
+    console.log('🔄 Loading AI Service script...');
+    await this.loadScript('ai-service.js');
+    console.log('✅ AI Service script loaded successfully');
+    
+    // Initialize AI service with API key from settings
+    console.log('🔄 Creating AI Service instance...');
+    this.aiService = new AIService();
+    console.log('✅ AI Service instance created');
+    
+    if (this.settings.geminiApiKey) {
+      console.log('🔄 Initializing AI Service with API key...');
+      await this.aiService.initialize(this.settings.geminiApiKey);
+      console.log('✅ AI Service initialized with API key');
+    } else {
+      console.log('⚠️ No API key found in settings');
+    }
+  }
+
+  async loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = chrome.runtime.getURL(src);
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
   async loadSettings() {
     try {
       const result = await chrome.storage.sync.get('nitroPromptsSettings');
@@ -38,7 +72,8 @@ class NitroPromptsModule {
         transparency: 80,
         moduleSize: 'medium',
         position: { x: 20, y: 20 },
-        customPrompts: []
+        customPrompts: [],
+        geminiApiKey: '' // Added for Gemini API key
       };
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -48,7 +83,8 @@ class NitroPromptsModule {
         transparency: 80,
         moduleSize: 'medium',
         position: { x: 20, y: 20 },
-        customPrompts: []
+        customPrompts: [],
+        geminiApiKey: ''
       };
     }
   }
@@ -133,7 +169,8 @@ class NitroPromptsModule {
 
     // Listen for messages from popup
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      console.log('Content script received message:', message);
+      console.log('📨 Content script received message:', message);
+      console.log('📨 Message action:', message.action);
       
       switch (message.action) {
         case 'showModule':
@@ -166,10 +203,48 @@ class NitroPromptsModule {
           });
           return true; // Keep message channel open for async response
         case 'test':
+          console.log('✅ Basic test case triggered');
           sendResponse({ success: true, message: 'Content script is working!', moduleVisible: this.isVisible });
+          break;
+        case 'ping':
+          console.log('🏓 Ping received, sending pong');
+          sendResponse({ success: true, message: 'pong', timestamp: Date.now() });
           break;
         case 'getModuleState':
           sendResponse({ success: true, visible: this.isVisible, moduleExists: !!this.module });
+          break;
+        case 'testAI':
+          console.log('🧪 TestAI case triggered');
+          (async () => {
+            try {
+              console.log('🧪 Starting AI test...');
+              if (!this.aiService) {
+                console.log('🧪 AI Service not found, initializing...');
+                await this.initAIService();
+              }
+              console.log('🧪 Initializing AI Service with provided API key...');
+              await this.aiService.initialize(message.apiKey);
+              console.log('🧪 Testing AI connection...');
+              const testResult = await this.aiService.testConnection();
+              console.log('🧪 Test result:', testResult);
+              
+              // Ensure we return a proper response object
+              if (testResult && typeof testResult === 'object') {
+                console.log('🧪 Sending successful test result');
+                sendResponse(testResult);
+              } else {
+                console.log('🧪 Invalid test result format, sending error');
+                sendResponse({ success: false, error: 'Invalid test result format' });
+              }
+            } catch (error) {
+              console.error('🧪 TestAI error:', error);
+              sendResponse({ 
+                success: false, 
+                error: error.message || 'Unknown error occurred during AI test' 
+              });
+            }
+          })();
+          return true; // Keep message channel open for async response
           break;
         case 'updateTransparency':
           if (message.transparency !== undefined) {
@@ -334,7 +409,7 @@ class NitroPromptsModule {
     
     if (!promptText || !contextInfo) return;
     
-    promptText.textContent = 'Analyzing page content and generating intelligent prompt...';
+    promptText.textContent = 'Analyzing page content and generating intelligent response...';
     
     try {
       // Analyze current page
@@ -348,13 +423,27 @@ class NitroPromptsModule {
       
       // Generate context-aware prompt
       const prompt = this.createContextPrompt(pageInfo);
-      promptText.textContent = prompt;
       
-      console.log('Generated prompt for:', pageInfo.type, 'with intelligence level:', this.settings.intelligenceLevel);
+      // Get AI response if service is available
+      if (this.aiService && this.aiService.isEnabled) {
+        try {
+          promptText.textContent = 'Getting AI response...';
+          const aiResponse = await this.aiService.getResponse(prompt, this.settings.intelligenceLevel);
+          promptText.textContent = aiResponse;
+          console.log('AI response generated for:', pageInfo.type);
+        } catch (aiError) {
+          console.warn('AI service failed, showing prompt instead:', aiError.message);
+          promptText.textContent = prompt + '\n\n[AI Service Error: ' + aiError.message + ']';
+        }
+      } else {
+        // Fallback to showing the prompt
+        promptText.textContent = prompt;
+        console.log('Generated prompt for:', pageInfo.type, 'with intelligence level:', this.settings.intelligenceLevel);
+      }
       
     } catch (error) {
-      promptText.textContent = 'Error generating prompt. Please try refreshing.';
-      console.error('Error generating prompt:', error);
+      promptText.textContent = 'Error generating response. Please try refreshing.';
+      console.error('Error generating response:', error);
     }
   }
 

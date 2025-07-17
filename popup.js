@@ -6,6 +6,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const transparency = document.getElementById('transparency');
   const transparencyValue = document.getElementById('transparencyValue');
   const moduleSize = document.getElementById('moduleSize');
+  const geminiApiKey = document.getElementById('geminiApiKey');
+  const testAI = document.getElementById('testAI');
+  const aiStatus = document.getElementById('aiStatus');
+  const clearApiKey = document.getElementById('clearApiKey');
   const openSettings = document.getElementById('openSettings');
   const resetSettings = document.getElementById('resetSettings');
 
@@ -16,7 +20,8 @@ document.addEventListener('DOMContentLoaded', function() {
     transparency: 80,
     moduleSize: 'medium',
     position: { x: 20, y: 20 },
-    customPrompts: []
+    customPrompts: [],
+    geminiApiKey: ''
   };
 
   // Load settings from storage
@@ -45,6 +50,10 @@ document.addEventListener('DOMContentLoaded', function() {
       transparency.value = settings.transparency;
       transparencyValue.textContent = `${settings.transparency}%`;
       moduleSize.value = settings.moduleSize;
+      geminiApiKey.value = settings.geminiApiKey || '';
+      
+      // Set initial border color for API key field
+      geminiApiKey.style.borderColor = settings.geminiApiKey ? '#28a745' : '#ddd';
       
       return settings;
     } catch (error) {
@@ -177,6 +186,143 @@ document.addEventListener('DOMContentLoaded', function() {
     settings.moduleSize = this.value;
     await saveSettings(settings);
     showNotification('Module size updated!', 'success');
+  });
+
+  geminiApiKey.addEventListener('input', async function() {
+    // Just update the visual feedback, don't save yet
+    this.style.borderColor = this.value.trim() ? '#28a745' : '#ddd';
+    console.log('Textarea input, value length:', this.value.length);
+  });
+
+  // Save API key button
+  const saveApiKey = document.getElementById('saveApiKey');
+  saveApiKey.addEventListener('click', async function() {
+    const apiKey = geminiApiKey.value.trim();
+    if (apiKey) {
+      const settings = await loadSettings();
+      settings.geminiApiKey = apiKey;
+      await saveSettings(settings);
+      
+      geminiApiKey.style.borderColor = '#28a745';
+      showNotification('API key saved successfully!', 'success');
+      console.log('API key saved via save button');
+    } else {
+      showNotification('Please enter an API key first', 'error');
+    }
+  });
+
+  // Test API key field button
+  const testApiKey = document.getElementById('testApiKey');
+  testApiKey.addEventListener('click', function() {
+    const testKey = 'test-api-key-' + Date.now();
+    geminiApiKey.value = testKey;
+    geminiApiKey.style.borderColor = '#28a745';
+    showNotification('Test key set! Click "Save Key" to save it.', 'success');
+    console.log('Test key set in textarea');
+  });
+
+  // Clear API key button
+  clearApiKey.addEventListener('click', async function() {
+    geminiApiKey.value = '';
+    geminiApiKey.style.borderColor = '#ddd';
+    const settings = await loadSettings();
+    settings.geminiApiKey = '';
+    await saveSettings(settings);
+    showNotification('API key cleared!', 'success');
+  });
+
+  // Focus event for textarea
+  geminiApiKey.addEventListener('focus', function() {
+    this.style.borderColor = '#667eea';
+    this.style.boxShadow = '0 0 0 2px rgba(102, 126, 234, 0.3)';
+    console.log('Textarea focused');
+  });
+
+  // Blur event for textarea
+  geminiApiKey.addEventListener('blur', function() {
+    this.style.boxShadow = 'none';
+    this.style.borderColor = this.value.trim() ? '#28a745' : '#ddd';
+    console.log('Textarea blurred, value length:', this.value.length);
+  });
+
+  // Add right-click context menu paste handler
+  geminiApiKey.addEventListener('contextmenu', function(e) {
+    // Don't prevent default - let the context menu show
+    console.log('Right-click on API key field');
+  });
+
+  testAI.addEventListener('click', async function() {
+    const settings = await loadSettings();
+    if (!settings.geminiApiKey) {
+      aiStatus.textContent = '❌ No API key provided';
+      aiStatus.className = 'status-indicator error';
+      return;
+    }
+
+    aiStatus.textContent = '🔄 Testing connection...';
+    aiStatus.className = 'status-indicator loading';
+
+    try {
+      // Test AI connection by sending message to content script
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab && tab.url && tab.url.startsWith('http')) {
+        console.log('🔄 Sending testAI message to tab:', tab.id);
+        
+        // First, test basic communication with a ping
+        try {
+          console.log('🏓 Testing basic communication...');
+          const pingResponse = await chrome.tabs.sendMessage(tab.id, { action: 'ping' });
+          console.log('🏓 Ping response:', pingResponse);
+        } catch (pingError) {
+          console.error('🏓 Ping failed:', pingError);
+          aiStatus.textContent = '❌ Content script not responding. Please refresh the page.';
+          aiStatus.className = 'status-indicator error';
+          return;
+        }
+        
+        // Add timeout to the message sending
+        const response = await Promise.race([
+          chrome.tabs.sendMessage(tab.id, {
+            action: 'testAI',
+            apiKey: settings.geminiApiKey
+          }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout: Content script did not respond')), 10000)
+          )
+        ]);
+        
+        console.log('TestAI response:', response);
+        console.log('Response type:', typeof response);
+        console.log('Response keys:', response ? Object.keys(response) : 'null/undefined');
+        
+        if (response && response.success) {
+          aiStatus.textContent = '✅ AI connection successful!';
+          aiStatus.className = 'status-indicator success';
+        } else {
+          // Handle different types of error responses
+          let errorMessage = 'Unknown error';
+          if (response && response.error) {
+            errorMessage = response.error;
+          } else if (response && response.message) {
+            errorMessage = response.message;
+          } else if (typeof response === 'string') {
+            errorMessage = response;
+          } else if (!response) {
+            errorMessage = 'No response from content script';
+          }
+          
+          aiStatus.textContent = '❌ AI connection failed: ' + errorMessage;
+          aiStatus.className = 'status-indicator error';
+        }
+      } else {
+        aiStatus.textContent = '❌ No active tab found';
+        aiStatus.className = 'status-indicator error';
+      }
+    } catch (error) {
+      console.error('Test AI error:', error);
+      aiStatus.textContent = '❌ Test failed: ' + (error.message || 'Unknown error');
+      aiStatus.className = 'status-indicator error';
+    }
   });
 
   openSettings.addEventListener('click', function() {
