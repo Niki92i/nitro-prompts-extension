@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const resetSettings = document.getElementById('resetSettings');
   const forceEnableBtn = document.getElementById('forceEnableBtn');
   const diagnosticBtn = document.getElementById('diagnosticBtn');
+  const fixToggleBtn = document.getElementById('fixToggleBtn');
 
   // Default settings
   const defaultSettings = {
@@ -103,18 +104,43 @@ document.addEventListener('DOMContentLoaded', function() {
   enableToggle.addEventListener('change', async function() {
     console.log('🔄 Toggle changed to:', this.checked);
     
+    // Force the toggle to the correct state
+    const newState = this.checked;
+    
+    // Update settings immediately
     const settings = await loadSettings();
-    settings.enabled = this.checked;
-    await saveSettings(settings);
+    settings.enabled = newState;
+    
+    // Force save with the new state
+    await chrome.storage.sync.set({ nitroPromptsSettings: settings });
+    console.log('💾 Settings saved with enabled:', newState);
     
     // Force update the UI to reflect the change
-    enableToggle.checked = settings.enabled;
+    enableToggle.checked = newState;
     
-    const status = this.checked ? 'enabled' : 'disabled';
+    // Send immediate message to content script
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab && tab.url && tab.url.startsWith('http')) {
+        if (newState) {
+          // Force enable
+          console.log('🔄 Sending force enable message...');
+          await chrome.tabs.sendMessage(tab.id, { action: 'forceEnable' });
+        } else {
+          // Force disable
+          console.log('🔄 Sending force disable message...');
+          await chrome.tabs.sendMessage(tab.id, { action: 'forceDisable' });
+        }
+      }
+    } catch (error) {
+      console.log('⚠️ Could not send message to content script:', error.message);
+    }
+    
+    const status = newState ? 'enabled' : 'disabled';
     showNotification(`Prompt module ${status}!`, 'success');
     
     // Force enable the module if toggle is checked
-    if (this.checked) {
+    if (newState) {
       await forceEnableModule();
     }
   });
@@ -125,19 +151,48 @@ document.addEventListener('DOMContentLoaded', function() {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (tab && tab.url && tab.url.startsWith('http')) {
         console.log('🔄 Force enabling module...');
-        const response = await chrome.tabs.sendMessage(tab.id, {
-          action: 'forceEnable'
-        });
         
-        if (response && response.success) {
-          console.log('✅ Module force enabled successfully');
-        } else {
-          console.warn('⚠️ Force enable failed:', response);
+        // Send multiple messages to ensure it works
+        const messages = [
+          { action: 'forceEnable' },
+          { action: 'showModule' },
+          { action: 'updateSettings', settings: { enabled: true } }
+        ];
+        
+        for (const message of messages) {
+          try {
+            const response = await chrome.tabs.sendMessage(tab.id, message);
+            console.log('✅ Message sent successfully:', message.action, response);
+          } catch (error) {
+            console.log('⚠️ Message failed:', message.action, error.message);
+          }
         }
+        
+        console.log('✅ Force enable sequence completed');
       }
     } catch (error) {
       console.log('⚠️ Could not force enable module:', error.message);
     }
+  }
+
+  // Add a function to fix toggle state
+  async function fixToggleState() {
+    console.log('🔧 Fixing toggle state...');
+    
+    // Get current settings
+    const settings = await loadSettings();
+    
+    // Force enable if settings say it should be enabled
+    if (settings.enabled) {
+      console.log('🔧 Settings say enabled, forcing enable...');
+      enableToggle.checked = true;
+      await forceEnableModule();
+    } else {
+      console.log('🔧 Settings say disabled, ensuring toggle is off...');
+      enableToggle.checked = false;
+    }
+    
+    showNotification('Toggle state fixed!', 'success');
   }
 
   intelligenceLevel.addEventListener('change', async function() {
@@ -151,30 +206,45 @@ document.addEventListener('DOMContentLoaded', function() {
     const value = this.value;
     transparencyValue.textContent = `${value}%`;
     
-    // Update settings immediately
-    const settings = await loadSettings();
-    settings.transparency = parseInt(value);
-    
-    // Apply transparency change in real-time
+    // Apply transparency change in real-time without saving to storage
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (tab && tab.url && tab.url.startsWith('http')) {
-        await chrome.tabs.sendMessage(tab.id, {
-          action: 'updateTransparency',
-          transparency: parseInt(value)
-        });
+        console.log('🔄 Applying transparency change in real-time:', value + '%');
+        
+        // Send the transparency update with timeout
+        const response = await Promise.race([
+          chrome.tabs.sendMessage(tab.id, {
+            action: 'updateTransparency',
+            transparency: parseInt(value)
+          }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout')), 3000)
+          )
+        ]);
+        
+        if (response && response.success) {
+          console.log('✅ Transparency updated successfully:', response.transparency + '%');
+        } else {
+          console.warn('⚠️ Transparency update failed:', response);
+        }
       }
     } catch (error) {
-      console.log('Could not apply transparency in real-time');
+      console.log('⚠️ Could not apply transparency in real-time:', error.message);
     }
-    
-    // Save settings
-    await saveSettings(settings);
   });
 
   // Add change event for when user finishes adjusting
   transparency.addEventListener('change', async function() {
-    showNotification(`Transparency set to ${this.value}%`, 'success');
+    const value = this.value;
+    console.log('💾 Saving transparency setting:', value + '%');
+    
+    // Update settings and save to storage
+    const settings = await loadSettings();
+    settings.transparency = parseInt(value);
+    await saveSettings(settings);
+    
+    showNotification(`Transparency set to ${value}%`, 'success');
   });
 
   moduleSize.addEventListener('change', async function() {
@@ -355,6 +425,10 @@ document.addEventListener('DOMContentLoaded', function() {
     await runDiagnostic();
   });
 
+  fixToggleBtn.addEventListener('click', async function() {
+    await fixToggleState();
+  });
+
   // Show notification function
   function showNotification(message, type = 'info') {
     // Create notification element
@@ -461,7 +535,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     showNotification('Module force enabled!', 'success');
   };
+
+  // Add fix toggle function for debugging
+  window.fixToggle = async function() {
+    await fixToggleState();
+  };
   
   console.log('💡 Use runDiagnostic() to diagnose extension issues');
   console.log('💡 Use forceEnable() to force enable the module');
+  console.log('💡 Use fixToggle() to fix toggle state');
 }); 
