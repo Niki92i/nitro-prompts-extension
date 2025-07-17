@@ -4,7 +4,7 @@
 class AIService {
   constructor() {
     this.apiKey = null;
-    this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+    this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
     this.isEnabled = false;
   }
 
@@ -51,10 +51,13 @@ class AIService {
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Gemini API Error Response:', errorText);
         throw new Error(`API request failed: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log('Gemini API Response:', data);
       
       if (data.candidates && data.candidates[0] && data.candidates[0].content) {
         return data.candidates[0].content.parts[0].text;

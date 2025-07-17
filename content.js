@@ -101,22 +101,48 @@ class NitroPromptsModule {
   }
 
   async initAIService() {
-    // Load AI service script
-    console.log('🔄 Loading AI Service script...');
-    await this.loadScript('ai-service.js');
-    console.log('✅ AI Service script loaded successfully');
-    
-    // Initialize AI service with API key from settings
-    console.log('🔄 Creating AI Service instance...');
-    this.aiService = new AIService();
-    console.log('✅ AI Service instance created');
-    
-    if (this.settings.geminiApiKey) {
-      console.log('🔄 Initializing AI Service with API key...');
-      await this.aiService.initialize(this.settings.geminiApiKey);
-      console.log('✅ AI Service initialized with API key');
-    } else {
-      console.log('⚠️ No API key found in settings');
+    try {
+      // Load AI service script
+      console.log('🔄 Loading AI Service script...');
+      await this.loadScript('ai-service.js');
+      console.log('✅ AI Service script loaded successfully');
+      
+      // Check if AIService class is available
+      if (typeof AIService === 'undefined') {
+        console.error('❌ AIService class not found after loading script');
+        throw new Error('AIService class not available');
+      }
+      
+      // Initialize AI service with API key from settings
+      console.log('🔄 Creating AI Service instance...');
+      this.aiService = new AIService();
+      console.log('✅ AI Service instance created');
+      
+      if (this.settings.geminiApiKey && this.settings.geminiApiKey.trim()) {
+        console.log('🔄 Initializing AI Service with API key...');
+        console.log('📊 API key length:', this.settings.geminiApiKey.length);
+        console.log('📊 API key starts with:', this.settings.geminiApiKey.substring(0, 10) + '...');
+        
+        await this.aiService.initialize(this.settings.geminiApiKey);
+        console.log('✅ AI Service initialized with API key');
+        console.log('📊 AI Service enabled:', this.aiService.isEnabled);
+      } else {
+        console.log('⚠️ No API key found in settings or API key is empty');
+        console.log('📊 Settings geminiApiKey:', this.settings.geminiApiKey);
+        // Initialize without API key
+        await this.aiService.initialize('');
+        console.log('✅ AI Service initialized without API key');
+        console.log('📊 AI Service enabled:', this.aiService.isEnabled);
+      }
+    } catch (error) {
+      console.error('❌ Error initializing AI service:', error);
+      // Create a fallback AI service instance
+      this.aiService = {
+        isEnabled: false,
+        initialize: async () => { console.log('⚠️ Using fallback AI service'); },
+        getResponse: async () => { throw new Error('AI Service not available'); },
+        testConnection: async () => ({ success: false, error: 'AI Service not initialized' })
+      };
     }
   }
 
@@ -416,16 +442,33 @@ class NitroPromptsModule {
           break;
         case 'testAI':
           console.log('🧪 TestAI case triggered');
+          console.log('🧪 Received API key length:', message.apiKey ? message.apiKey.length : 0);
+          console.log('🧪 API key starts with:', message.apiKey ? message.apiKey.substring(0, 10) + '...' : 'none');
+          
           (async () => {
             try {
               console.log('🧪 Starting AI test...');
+              
+              // Check if AI service exists
               if (!this.aiService) {
                 console.log('🧪 AI Service not found, initializing...');
                 await this.initAIService();
               }
+              
+              // Check if API key is provided
+              if (!message.apiKey || !message.apiKey.trim()) {
+                console.log('🧪 No API key provided in test message');
+                sendResponse({ 
+                  success: false, 
+                  error: 'No API key provided. Please add your Gemini API key in the extension popup.' 
+                });
+                return;
+              }
+              
               console.log('🧪 Initializing AI Service with provided API key...');
               await this.aiService.initialize(message.apiKey);
-              console.log('🧪 Testing AI connection...');
+              console.log('🧪 AI Service initialized, testing connection...');
+              
               const testResult = await this.aiService.testConnection();
               console.log('🧪 Test result:', testResult);
               
@@ -475,6 +518,18 @@ class NitroPromptsModule {
             console.warn('⚠️ Invalid transparency value provided:', message.transparency);
             sendResponse({ success: false, error: 'Invalid transparency value provided' });
           }
+          break;
+        case 'getAIState':
+          console.log('🤖 GetAIState case triggered');
+          const aiState = {
+            hasAIService: !!this.aiService,
+            isEnabled: this.aiService ? this.aiService.isEnabled : false,
+            hasApiKey: !!(this.settings.geminiApiKey && this.settings.geminiApiKey.trim()),
+            apiKeyLength: this.settings.geminiApiKey ? this.settings.geminiApiKey.length : 0,
+            settings: this.settings
+          };
+          console.log('🤖 AI State:', aiState);
+          sendResponse(aiState);
           break;
       }
     });
@@ -742,15 +797,25 @@ class NitroPromptsModule {
       const prompt = this.createContextPrompt(pageInfo);
       
       // Get AI response if service is available
-      if (this.aiService && this.aiService.isEnabled) {
+      if (this.settings.geminiApiKey && this.settings.geminiApiKey.trim()) {
         try {
           promptText.textContent = 'Getting AI response...';
-          const aiResponse = await this.aiService.getResponse(prompt, this.settings.intelligenceLevel);
-          promptText.textContent = aiResponse;
-          console.log('AI response generated for:', pageInfo.type);
-        } catch (aiError) {
-          console.warn('AI service failed, showing prompt instead:', aiError.message);
-          promptText.textContent = prompt + '\n\n[AI Service Error: ' + aiError.message + ']';
+          const response = await chrome.runtime.sendMessage({
+            action: 'geminiAI',
+            prompt: prompt,
+            intelligenceLevel: this.settings.intelligenceLevel,
+            apiKey: this.settings.geminiApiKey
+          });
+          if (response && response.success) {
+            promptText.textContent = response.response;
+            console.log('AI response generated for:', pageInfo.type);
+          } else {
+            promptText.textContent = prompt + '\n\n[AI Service Error: ' + (response?.error || 'Unknown error') + ']';
+            console.warn('AI service failed, showing prompt instead:', response?.error || 'Unknown error');
+          }
+        } catch (error) {
+          promptText.textContent = prompt + '\n\n[AI Service Error: ' + error.message + ']';
+          console.error('Error generating response:', error);
         }
       } else {
         // Fallback to showing the prompt
@@ -791,33 +856,45 @@ class NitroPromptsModule {
       const prompt = this.createSummaryPrompt(pageInfo);
 
       // Get AI response if service is available
-      if (this.aiService && this.aiService.isEnabled) {
+      if (this.settings.geminiApiKey && this.settings.geminiApiKey.trim()) {
         try {
           summaryText.textContent = '🤖 Getting AI summary...';
-          const aiResponse = await this.aiService.getResponse(prompt, 'basic'); // Summary is typically basic
-          
-          // Clean up the response and format it nicely
-          let formattedResponse = aiResponse.trim();
-          
-          // If the response is very long, truncate it
-          if (formattedResponse.length > 1000) {
-            formattedResponse = formattedResponse.substring(0, 1000) + '...';
-          }
-          
-          summaryText.textContent = formattedResponse;
-          console.log('✅ AI summary generated for:', pageInfo.type);
+          const response = await chrome.runtime.sendMessage({
+            action: 'geminiAI',
+            prompt: prompt,
+            intelligenceLevel: 'basic', // Summary is typically basic
+            apiKey: this.settings.geminiApiKey
+          });
+          if (response && response.success) {
+            // Clean up the response and format it nicely
+            let formattedResponse = response.response.trim();
+            
+            // If the response is very long, truncate it
+            if (formattedResponse.length > 1000) {
+              formattedResponse = formattedResponse.substring(0, 1000) + '...';
+            }
+            
+            summaryText.textContent = formattedResponse;
+            console.log('✅ AI summary generated for:', pageInfo.type);
 
-          // Update summary details
-          summaryLength.textContent = formattedResponse.length + ' chars';
-          summaryFocus.textContent = this.getSummaryFocus(formattedResponse);
-          summaryGenerated.textContent = new Date().toLocaleTimeString();
-          
-        } catch (aiError) {
-          console.warn('⚠️ AI service failed, showing prompt instead:', aiError.message);
-          summaryText.textContent = '❌ AI Service Error: ' + aiError.message + '\n\n' + prompt;
+            // Update summary details
+            summaryLength.textContent = formattedResponse.length + ' chars';
+            summaryFocus.textContent = this.getSummaryFocus(formattedResponse);
+            summaryGenerated.textContent = new Date().toLocaleTimeString();
+            
+          } else {
+            summaryText.textContent = '❌ AI Service Error: ' + (response?.error || 'Unknown error') + '\n\n' + prompt;
+            summaryLength.textContent = 'Error';
+            summaryFocus.textContent = 'N/A';
+            summaryGenerated.textContent = 'Failed';
+            console.warn('⚠️ AI service failed, showing prompt instead:', response?.error || 'Unknown error');
+          }
+        } catch (error) {
+          summaryText.textContent = '❌ Error generating summary. Please try refreshing the page.';
           summaryLength.textContent = 'Error';
           summaryFocus.textContent = 'N/A';
           summaryGenerated.textContent = 'Failed';
+          console.error('❌ Error generating summary:', error);
         }
       } else {
         // Fallback to showing the prompt

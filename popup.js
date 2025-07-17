@@ -329,63 +329,21 @@ document.addEventListener('DOMContentLoaded', function() {
     aiStatus.className = 'status-indicator loading';
 
     try {
-      // Test AI connection by sending message to content script
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tab && tab.url && tab.url.startsWith('http')) {
-        console.log('🔄 Sending testAI message to tab:', tab.id);
-        
-        // First, test basic communication with a ping
-        try {
-          console.log('🏓 Testing basic communication...');
-          const pingResponse = await chrome.tabs.sendMessage(tab.id, { action: 'ping' });
-          console.log('🏓 Ping response:', pingResponse);
-        } catch (pingError) {
-          console.error('🏓 Ping failed:', pingError);
-          aiStatus.textContent = '❌ Content script not responding. Please refresh the page.';
-          aiStatus.className = 'status-indicator error';
-          return;
-        }
-        
-        // Add timeout to the message sending
-        const response = await Promise.race([
-          chrome.tabs.sendMessage(tab.id, {
-            action: 'testAI',
-            apiKey: settings.geminiApiKey
-          }),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout: Content script did not respond')), 10000)
-          )
-        ]);
-        
-        console.log('TestAI response:', response);
-        console.log('Response type:', typeof response);
-        console.log('Response keys:', response ? Object.keys(response) : 'null/undefined');
-        
-        if (response && response.success) {
-          aiStatus.textContent = '✅ AI connection successful!';
-          aiStatus.className = 'status-indicator success';
-        } else {
-          // Handle different types of error responses
-          let errorMessage = 'Unknown error';
-          if (response && response.error) {
-            errorMessage = response.error;
-          } else if (response && response.message) {
-            errorMessage = response.message;
-          } else if (typeof response === 'string') {
-            errorMessage = response;
-          } else if (!response) {
-            errorMessage = 'No response from content script';
-          }
-          
-          aiStatus.textContent = '❌ AI connection failed: ' + errorMessage;
-          aiStatus.className = 'status-indicator error';
-        }
+      // Test AI connection by sending message to background Gemini proxy
+      const response = await chrome.runtime.sendMessage({
+        action: 'geminiAI',
+        prompt: 'Hello! Please respond with "AI Service is working correctly."',
+        intelligenceLevel: 'basic',
+        apiKey: settings.geminiApiKey
+      });
+      if (response && response.success) {
+        aiStatus.textContent = '✅ AI connection successful!';
+        aiStatus.className = 'status-indicator success';
       } else {
-        aiStatus.textContent = '❌ No active tab found';
+        aiStatus.textContent = '❌ AI connection failed: ' + (response?.error || 'Unknown error');
         aiStatus.className = 'status-indicator error';
       }
     } catch (error) {
-      console.error('Test AI error:', error);
       aiStatus.textContent = '❌ Test failed: ' + (error.message || 'Unknown error');
       aiStatus.className = 'status-indicator error';
     }
@@ -473,6 +431,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (settings) {
         console.log('✅ Settings found in storage');
         console.log('📊 Enabled state in storage:', settings.enabled);
+        console.log('📊 API key in storage:', settings.geminiApiKey ? 'Present (' + settings.geminiApiKey.length + ' chars)' : 'Not found');
         console.log('📊 Full settings:', settings);
       } else {
         console.log('❌ No settings found in storage');
@@ -503,6 +462,14 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (stateError) {
           console.log('❌ Get module state failed:', stateError.message);
         }
+        
+        // Test AI service state
+        try {
+          const aiStateResponse = await chrome.tabs.sendMessage(tab.id, { action: 'getAIState' });
+          console.log('✅ AI state response:', aiStateResponse);
+        } catch (aiStateError) {
+          console.log('❌ Get AI state failed:', aiStateError.message);
+        }
       } else {
         console.log('❌ No valid tab found');
       }
@@ -517,6 +484,17 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log('📊 Current permissions:', permissions);
     } catch (error) {
       console.log('❌ Could not check permissions:', error.message);
+    }
+    
+    // Check 4: API Key Input
+    console.log('🔑 Check 4: API Key Input');
+    const apiKeyInput = document.getElementById('geminiApiKey');
+    if (apiKeyInput) {
+      console.log('✅ API key input found');
+      console.log('📊 Current value length:', apiKeyInput.value.length);
+      console.log('📊 Value starts with:', apiKeyInput.value.substring(0, 10) + '...');
+    } else {
+      console.log('❌ API key input not found');
     }
     
     console.log('🔍 === DIAGNOSTIC COMPLETE ===');
