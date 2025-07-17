@@ -14,16 +14,16 @@
     </header>
 
     <main class="popup-main">
-      <div class="control-section">
-        <label class="toggle-label">
-          <input type="checkbox" id="enableModule" class="toggle-input">
-          <span class="toggle-slider"></span>
-          <span class="toggle-text">Enable Prompt Module</span>
-        </label>
-      </div>
-
       <div class="settings-section">
         <h3>Quick Settings</h3>
+        
+        <div class="setting-item toggle-item">
+          <label for="enableToggle">Enable Prompt Module:</label>
+          <div class="toggle-switch">
+            <input type="checkbox" id="enableToggle" checked>
+            <label for="enableToggle" class="toggle-slider"></label>
+          </div>
+        </div>
         
         <div class="setting-item">
           <label for="intelligenceLevel">Intelligence Level:</label>

@@ -1,7 +1,7 @@
 // Popup script for Nitro Prompts extension
 document.addEventListener('DOMContentLoaded', function() {
   // DOM elements
-  const enableModule = document.getElementById('enableModule');
+  const enableToggle = document.getElementById('enableToggle');
   const intelligenceLevel = document.getElementById('intelligenceLevel');
   const transparency = document.getElementById('transparency');
   const transparencyValue = document.getElementById('transparencyValue');
@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Default settings
   const defaultSettings = {
-    enabled: false,
+    enabled: true, // Enabled by default
     intelligenceLevel: 'intermediate',
     transparency: 80,
     moduleSize: 'medium',
@@ -30,22 +30,8 @@ document.addEventListener('DOMContentLoaded', function() {
       const result = await chrome.storage.sync.get('nitroPromptsSettings');
       const settings = result.nitroPromptsSettings || defaultSettings;
       
-      // Get the current module state from the active tab
-      try {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tab && tab.url && tab.url.startsWith('http')) {
-          const response = await chrome.tabs.sendMessage(tab.id, { action: 'getModuleState' });
-          if (response && response.success) {
-            // Sync the checkbox with the actual module state
-            settings.enabled = response.visible;
-            console.log('Synced with actual module state:', response.visible);
-          }
-        }
-      } catch (error) {
-        console.log('Could not sync with content script, using stored settings');
-      }
-      
-      enableModule.checked = settings.enabled;
+      // Update UI with settings
+      enableToggle.checked = settings.enabled;
       intelligenceLevel.value = settings.intelligenceLevel;
       transparency.value = settings.transparency;
       transparencyValue.textContent = `${settings.transparency}%`;
@@ -55,9 +41,10 @@ document.addEventListener('DOMContentLoaded', function() {
       // Set initial border color for API key field
       geminiApiKey.style.borderColor = settings.geminiApiKey ? '#28a745' : '#ddd';
       
+      console.log('📋 Settings loaded and UI updated:', settings);
       return settings;
     } catch (error) {
-      console.error('Error loading settings:', error);
+      console.error('❌ Error loading settings:', error);
       return defaultSettings;
     }
   }
@@ -65,83 +52,45 @@ document.addEventListener('DOMContentLoaded', function() {
   // Save settings to storage
   async function saveSettings(settings) {
     try {
+      console.log('💾 Saving settings:', settings);
       await chrome.storage.sync.set({ nitroPromptsSettings: settings });
+      console.log('✅ Settings saved to storage');
       
       // Send message to content script to update module
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (tab && tab.url && tab.url.startsWith('http')) {
         try {
-          await chrome.tabs.sendMessage(tab.id, {
+          console.log('🔄 Sending settings update to content script');
+          const response = await chrome.tabs.sendMessage(tab.id, {
             action: 'updateSettings',
             settings: settings
           });
+          
+          if (response && response.success) {
+            console.log('✅ Settings update successful:', response);
+          } else {
+            console.warn('⚠️ Settings update failed:', response);
+          }
         } catch (error) {
-          console.log('Content script not ready yet, settings will be applied on next page load');
+          console.log('⚠️ Content script not ready yet, settings will be applied on next page load:', error.message);
         }
       }
     } catch (error) {
-      console.error('Error saving settings:', error);
-    }
-  }
-
-  // Toggle module visibility
-  async function toggleModule(show) {
-    try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tab && tab.url && tab.url.startsWith('http')) {
-        try {
-          await chrome.tabs.sendMessage(tab.id, {
-            action: show ? 'showModule' : 'hideModule'
-          });
-        } catch (error) {
-          console.log('Content script not ready, module will be toggled on next page load');
-        }
-      }
-    } catch (error) {
-      console.error('Error toggling module:', error);
+      console.error('❌ Error saving settings:', error);
+      throw error;
     }
   }
 
   // Event listeners
-  enableModule.addEventListener('change', async function() {
-    console.log('Toggle clicked, checked state:', this.checked);
-    
-    // Load current settings
+  enableToggle.addEventListener('change', async function() {
     const settings = await loadSettings();
-    console.log('Current settings:', settings);
-    
-    // Update the enabled state based on the checkbox
     settings.enabled = this.checked;
-    console.log('Updated settings:', settings);
-    
-    // Save the updated settings
     await saveSettings(settings);
     
-    // Toggle module visibility based on the new state
-    await toggleModule(this.checked);
-    
-    // Show feedback to user
     const status = this.checked ? 'enabled' : 'disabled';
-    console.log('Showing notification:', status);
     showNotification(`Prompt module ${status}!`, 'success');
     
-    // Verify the change was applied
-    setTimeout(async () => {
-      try {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tab && tab.url && tab.url.startsWith('http')) {
-          const response = await chrome.tabs.sendMessage(tab.id, { action: 'getModuleState' });
-          if (response && response.success) {
-            console.log('Module state after toggle:', response.visible, 'Expected:', this.checked);
-            if (response.visible !== this.checked) {
-              console.warn('Module state mismatch detected!');
-            }
-          }
-        }
-      } catch (error) {
-        console.log('Could not verify module state');
-      }
-    }, 100);
+    console.log('🔄 Toggle changed to:', this.checked);
   });
 
   intelligenceLevel.addEventListener('change', async function() {
@@ -378,4 +327,68 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Initialize popup
   loadSettings();
+  
+  // Add diagnostic function
+  window.runDiagnostic = async function() {
+    console.log('🔍 === NITRO PROMPTS DIAGNOSTIC ===');
+    
+    // Check 1: Storage
+    console.log('💾 Check 1: Storage');
+    try {
+      const result = await chrome.storage.sync.get('nitroPromptsSettings');
+      console.log('📊 Storage result:', result);
+      const settings = result.nitroPromptsSettings;
+      if (settings) {
+        console.log('✅ Settings found in storage');
+        console.log('📊 Enabled state in storage:', settings.enabled);
+        console.log('📊 Full settings:', settings);
+      } else {
+        console.log('❌ No settings found in storage');
+      }
+    } catch (error) {
+      console.error('❌ Storage error:', error);
+    }
+    
+    // Check 2: Content Script Communication
+    console.log('🔄 Check 2: Content Script Communication');
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab && tab.url && tab.url.startsWith('http')) {
+        console.log('✅ Valid tab found:', tab.url);
+        
+        // Test ping
+        try {
+          const pingResponse = await chrome.tabs.sendMessage(tab.id, { action: 'ping' });
+          console.log('✅ Ping successful:', pingResponse);
+        } catch (pingError) {
+          console.log('❌ Ping failed:', pingError.message);
+        }
+        
+        // Test getModuleState
+        try {
+          const stateResponse = await chrome.tabs.sendMessage(tab.id, { action: 'getModuleState' });
+          console.log('✅ Module state response:', stateResponse);
+        } catch (stateError) {
+          console.log('❌ Get module state failed:', stateError.message);
+        }
+      } else {
+        console.log('❌ No valid tab found');
+      }
+    } catch (error) {
+      console.error('❌ Tab query error:', error);
+    }
+    
+    // Check 3: Extension Permissions
+    console.log('🔐 Check 3: Extension Permissions');
+    try {
+      const permissions = await chrome.permissions.getAll();
+      console.log('📊 Current permissions:', permissions);
+    } catch (error) {
+      console.log('❌ Could not check permissions:', error.message);
+    }
+    
+    console.log('🔍 === DIAGNOSTIC COMPLETE ===');
+  };
+  
+  console.log('💡 Use runDiagnostic() to diagnose extension issues');
 }); 

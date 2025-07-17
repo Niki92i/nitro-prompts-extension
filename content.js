@@ -7,29 +7,56 @@ class NitroPromptsModule {
     this.isDragging = false;
     this.dragOffset = { x: 0, y: 0 };
     this.aiService = null;
+    this.isInitialized = false;
     
     this.init();
   }
 
   async init() {
-    // Load settings
-    await this.loadSettings();
+    try {
+      console.log('🚀 Initializing Nitro Prompts Module...');
+      
+      // Load settings first
+      await this.loadSettings();
+      console.log('📋 Settings loaded:', this.settings);
+      
+      // Initialize AI service
+      await this.initAIService();
+      
+      // Create and inject module
+      this.createModule();
+      
+      // Set up event listeners
+      this.setupEventListeners();
+      
+      // Set initial visibility based on settings
+      this.setInitialVisibility();
+      
+      this.isInitialized = true;
+      console.log('✅ Module initialization complete. Module enabled:', this.settings.enabled);
+      
+    } catch (error) {
+      console.error('❌ Error during initialization:', error);
+    }
+  }
+
+  setInitialVisibility() {
+    if (!this.module) {
+      console.warn('⚠️ Module not created yet, cannot set visibility');
+      return;
+    }
     
-    // Initialize AI service
-    this.initAIService();
-    
-    // Create and inject module
-    this.createModule();
-    
-    // Set up event listeners
-    this.setupEventListeners();
-    
-    // Show module if enabled in settings
+    // Set the initial visibility state based on settings
     if (this.settings.enabled) {
-      this.showModule();
-      console.log('Module initialized and shown (enabled in settings)');
+      this.module.style.display = 'block';
+      this.module.classList.add('show');
+      this.isVisible = true;
+      console.log('👁️ Module set to visible (enabled in settings)');
     } else {
-      console.log('Module initialized but hidden (disabled in settings)');
+      this.module.style.display = 'none';
+      this.module.classList.remove('show');
+      this.isVisible = false;
+      console.log('🙈 Module set to hidden (disabled in settings)');
     }
   }
 
@@ -66,19 +93,32 @@ class NitroPromptsModule {
   async loadSettings() {
     try {
       const result = await chrome.storage.sync.get('nitroPromptsSettings');
-      this.settings = result.nitroPromptsSettings || {
-        enabled: false,
-        intelligenceLevel: 'intermediate',
-        transparency: 80,
-        moduleSize: 'medium',
-        position: { x: 20, y: 20 },
-        customPrompts: [],
-        geminiApiKey: '' // Added for Gemini API key
-      };
+      const existingSettings = result.nitroPromptsSettings;
+      
+      if (existingSettings) {
+        // Migration: If settings exist but enabled is explicitly false, update to true
+        if (existingSettings.enabled === false) {
+          console.log('🔄 Migrating existing settings: enabling module by default');
+          existingSettings.enabled = true;
+          await chrome.storage.sync.set({ nitroPromptsSettings: existingSettings });
+        }
+        this.settings = existingSettings;
+      } else {
+        // New installation: use default settings
+        this.settings = {
+          enabled: true, // Enabled by default
+          intelligenceLevel: 'intermediate',
+          transparency: 80,
+          moduleSize: 'medium',
+          position: { x: 20, y: 20 },
+          customPrompts: [],
+          geminiApiKey: '' // Added for Gemini API key
+        };
+      }
     } catch (error) {
       console.error('Error loading settings:', error);
       this.settings = {
-        enabled: false,
+        enabled: true, // Enabled by default
         intelligenceLevel: 'intermediate',
         transparency: 80,
         moduleSize: 'medium',
@@ -93,17 +133,35 @@ class NitroPromptsModule {
     // Check if module already exists
     if (document.getElementById('nitro-prompts-module')) {
       this.module = document.getElementById('nitro-prompts-module');
+      console.log('🔄 Found existing module, reusing it');
       return;
     }
+
+    console.log('🏗️ Creating new module...');
 
     // Create module container
     this.module = document.createElement('div');
     this.module.id = 'nitro-prompts-module';
-    this.module.className = 'nitro-prompts-module';
+    this.module.className = `nitro-prompts-module size-${this.settings.moduleSize}`;
     
     // Set initial position
     this.module.style.left = `${this.settings.position.x}px`;
     this.module.style.top = `${this.settings.position.y}px`;
+    
+    // Set initial visibility state
+    if (this.settings.enabled) {
+      this.module.style.display = 'block';
+      this.module.classList.add('show');
+      this.isVisible = true;
+    } else {
+      this.module.style.display = 'none';
+      this.module.classList.remove('show');
+      this.isVisible = false;
+    }
+    
+    // Apply transparency
+    const opacity = this.settings.transparency / 100;
+    this.module.style.opacity = opacity;
     
     // Create module content
     this.module.innerHTML = `
@@ -150,12 +208,15 @@ class NitroPromptsModule {
     
     // Append to body
     document.body.appendChild(this.module);
+    console.log('📦 Module appended to DOM');
     
     // Set up module event listeners
     this.setupModuleEventListeners();
     
-    // Apply initial settings
-    this.applySettings();
+    // Generate initial prompt if visible
+    if (this.isVisible) {
+      this.generatePrompt();
+    }
   }
 
   setupEventListeners() {
@@ -174,32 +235,41 @@ class NitroPromptsModule {
       
       switch (message.action) {
         case 'showModule':
+          console.log('👁️ Show module requested');
           this.showModule();
-          sendResponse({ success: true, action: 'showModule' });
+          sendResponse({ success: true, action: 'showModule', visible: this.isVisible });
           break;
         case 'hideModule':
+          console.log('🙈 Hide module requested');
           this.hideModule();
-          sendResponse({ success: true, action: 'hideModule' });
+          sendResponse({ success: true, action: 'hideModule', visible: this.isVisible });
           break;
         case 'toggleModule':
+          console.log('🔄 Toggle module requested');
           this.toggleModule();
           sendResponse({ success: true, action: 'toggleModule', visible: this.isVisible });
           break;
         case 'updateSettings':
+          console.log('⚙️ Update settings requested:', message.settings);
           this.settings = message.settings;
           this.applySettings();
+          
           // Show/hide module based on new settings
           if (this.settings.enabled) {
+            console.log('👁️ Settings enabled, showing module');
             this.showModule();
           } else {
+            console.log('🙈 Settings disabled, hiding module');
             this.hideModule();
           }
-          sendResponse({ success: true, action: 'updateSettings' });
+          sendResponse({ success: true, action: 'updateSettings', visible: this.isVisible });
           break;
         case 'resetSettings':
+          console.log('🔄 Reset settings requested');
           this.loadSettings().then(() => {
             this.applySettings();
-            sendResponse({ success: true, action: 'resetSettings' });
+            this.setInitialVisibility();
+            sendResponse({ success: true, action: 'resetSettings', visible: this.isVisible });
           });
           return true; // Keep message channel open for async response
         case 'test':
@@ -211,7 +281,16 @@ class NitroPromptsModule {
           sendResponse({ success: true, message: 'pong', timestamp: Date.now() });
           break;
         case 'getModuleState':
-          sendResponse({ success: true, visible: this.isVisible, moduleExists: !!this.module });
+          console.log('📊 Get module state requested');
+          const state = {
+            success: true, 
+            visible: this.isVisible, 
+            moduleExists: !!this.module,
+            enabled: this.settings?.enabled || false,
+            initialized: this.isInitialized
+          };
+          console.log('📊 Module state:', state);
+          sendResponse(state);
           break;
         case 'testAI':
           console.log('🧪 TestAI case triggered');
@@ -361,30 +440,59 @@ class NitroPromptsModule {
   }
 
   showModule() {
-    if (this.module) {
-      this.module.style.display = 'block';
-      this.module.classList.add('show');
-      this.isVisible = true;
-      console.log('Module shown - isVisible:', this.isVisible);
+    if (!this.module) {
+      console.warn('⚠️ Cannot show module: module not created');
+      return;
     }
+    
+    console.log('👁️ Showing module...');
+    this.module.style.display = 'block';
+    this.module.classList.add('show');
+    this.isVisible = true;
+    
+    // Update settings to reflect the change (async to prevent race conditions)
+    this.settings.enabled = true;
+    chrome.storage.sync.set({ nitroPromptsSettings: this.settings }).then(() => {
+      console.log('✅ Settings updated after showing module');
+    }).catch((error) => {
+      console.error('❌ Error updating settings:', error);
+    });
+    
+    console.log('✅ Module shown - isVisible:', this.isVisible, 'enabled:', this.settings.enabled);
   }
 
   hideModule() {
-    if (this.module) {
-      this.module.style.display = 'none';
-      this.module.classList.remove('show');
-      this.isVisible = false;
-      console.log('Module hidden - isVisible:', this.isVisible);
+    if (!this.module) {
+      console.warn('⚠️ Cannot hide module: module not created');
+      return;
     }
+    
+    console.log('🙈 Hiding module...');
+    this.module.style.display = 'none';
+    this.module.classList.remove('show');
+    this.isVisible = false;
+    
+    // Update settings to reflect the change (async to prevent race conditions)
+    this.settings.enabled = false;
+    chrome.storage.sync.set({ nitroPromptsSettings: this.settings }).then(() => {
+      console.log('✅ Settings updated after hiding module');
+    }).catch((error) => {
+      console.error('❌ Error updating settings:', error);
+    });
+    
+    console.log('✅ Module hidden - isVisible:', this.isVisible, 'enabled:', this.settings.enabled);
   }
 
   toggleModule() {
+    console.log('🔄 Toggling module. Current state - isVisible:', this.isVisible, 'enabled:', this.settings.enabled);
+    
     if (this.isVisible) {
       this.hideModule();
     } else {
       this.showModule();
     }
-    console.log('Module toggled, visible:', this.isVisible);
+    
+    console.log('✅ Module toggled, new state - visible:', this.isVisible, 'enabled:', this.settings.enabled);
   }
 
   toggleMinimize() {
@@ -774,4 +882,4 @@ if (document.readyState === 'loading') {
   });
 } else {
   new NitroPromptsModule();
-} 
+}
