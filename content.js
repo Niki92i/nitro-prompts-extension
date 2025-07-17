@@ -292,6 +292,14 @@ class NitroPromptsModule {
           console.log('📊 Module state:', state);
           sendResponse(state);
           break;
+        case 'forceEnable':
+          console.log('🔄 Force enable requested');
+          this.settings.enabled = true;
+          this.showModule();
+          // Save the updated settings
+          chrome.storage.sync.set({ nitroPromptsSettings: this.settings });
+          sendResponse({ success: true, action: 'forceEnable', visible: this.isVisible });
+          break;
         case 'testAI':
           console.log('🧪 TestAI case triggered');
           (async () => {

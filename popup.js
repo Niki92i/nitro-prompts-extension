@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const clearApiKey = document.getElementById('clearApiKey');
   const openSettings = document.getElementById('openSettings');
   const resetSettings = document.getElementById('resetSettings');
+  const forceEnableBtn = document.getElementById('forceEnableBtn');
+  const diagnosticBtn = document.getElementById('diagnosticBtn');
 
   // Default settings
   const defaultSettings = {
@@ -28,7 +30,23 @@ document.addEventListener('DOMContentLoaded', function() {
   async function loadSettings() {
     try {
       const result = await chrome.storage.sync.get('nitroPromptsSettings');
-      const settings = result.nitroPromptsSettings || defaultSettings;
+      let settings = result.nitroPromptsSettings;
+      
+      // Migration logic: Ensure module is enabled by default
+      if (!settings) {
+        // New installation: use default settings
+        settings = { ...defaultSettings };
+        console.log('🆕 New installation detected, using default settings');
+      } else {
+        // Existing installation: migrate if needed
+        if (settings.enabled === false) {
+          console.log('🔄 Migrating existing settings: enabling module by default');
+          settings.enabled = true;
+          // Save the migrated settings
+          await chrome.storage.sync.set({ nitroPromptsSettings: settings });
+        }
+        console.log('📋 Existing settings loaded and migrated if needed');
+      }
       
       // Update UI with settings
       enableToggle.checked = settings.enabled;
@@ -83,15 +101,44 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Event listeners
   enableToggle.addEventListener('change', async function() {
+    console.log('🔄 Toggle changed to:', this.checked);
+    
     const settings = await loadSettings();
     settings.enabled = this.checked;
     await saveSettings(settings);
     
+    // Force update the UI to reflect the change
+    enableToggle.checked = settings.enabled;
+    
     const status = this.checked ? 'enabled' : 'disabled';
     showNotification(`Prompt module ${status}!`, 'success');
     
-    console.log('🔄 Toggle changed to:', this.checked);
+    // Force enable the module if toggle is checked
+    if (this.checked) {
+      await forceEnableModule();
+    }
   });
+
+  // Force enable module function
+  async function forceEnableModule() {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab && tab.url && tab.url.startsWith('http')) {
+        console.log('🔄 Force enabling module...');
+        const response = await chrome.tabs.sendMessage(tab.id, {
+          action: 'forceEnable'
+        });
+        
+        if (response && response.success) {
+          console.log('✅ Module force enabled successfully');
+        } else {
+          console.warn('⚠️ Force enable failed:', response);
+        }
+      }
+    } catch (error) {
+      console.log('⚠️ Could not force enable module:', error.message);
+    }
+  }
 
   intelligenceLevel.addEventListener('change', async function() {
     const settings = await loadSettings();
@@ -299,6 +346,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
+  // Debug button event listeners
+  forceEnableBtn.addEventListener('click', async function() {
+    await forceEnable();
+  });
+
+  diagnosticBtn.addEventListener('click', async function() {
+    await runDiagnostic();
+  });
+
   // Show notification function
   function showNotification(message, type = 'info') {
     // Create notification element
@@ -326,7 +382,9 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Initialize popup
-  loadSettings();
+  loadSettings().then(() => {
+    console.log('✅ Popup initialized with settings');
+  });
   
   // Add diagnostic function
   window.runDiagnostic = async function() {
@@ -389,6 +447,21 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('🔍 === DIAGNOSTIC COMPLETE ===');
   };
+
+  // Add force enable function for debugging
+  window.forceEnable = async function() {
+    console.log('🔄 Force enabling module via debug function...');
+    await forceEnableModule();
+    
+    // Also update settings
+    const settings = await loadSettings();
+    settings.enabled = true;
+    await saveSettings(settings);
+    enableToggle.checked = true;
+    
+    showNotification('Module force enabled!', 'success');
+  };
   
   console.log('💡 Use runDiagnostic() to diagnose extension issues');
+  console.log('💡 Use forceEnable() to force enable the module');
 }); 
