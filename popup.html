@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nitro Prompts</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <header class="popup-header">
+      <h1>🚀 Nitro Prompts</h1>
+      <p>AI-powered prompts for every website</p>
+    </header>
+
+    <main class="popup-main">
+      <div class="control-section">
+        <label class="toggle-label">
+          <input type="checkbox" id="enableModule" class="toggle-input">
+          <span class="toggle-slider"></span>
+          <span class="toggle-text">Enable Prompt Module</span>
+        </label>
+      </div>
+
+      <div class="settings-section">
+        <h3>Quick Settings</h3>
+        
+        <div class="setting-item">
+          <label for="intelligenceLevel">Intelligence Level:</label>
+          <select id="intelligenceLevel" class="setting-select">
+            <option value="basic">Basic</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+            <option value="expert">Expert</option>
+          </select>
+        </div>
+
+        <div class="setting-item">
+          <label for="transparency">Transparency:</label>
+          <input type="range" id="transparency" min="0" max="100" value="80" class="setting-range">
+          <span id="transparencyValue">80%</span>
+        </div>
+
+        <div class="setting-item">
+          <label for="moduleSize">Module Size:</label>
+          <select id="moduleSize" class="setting-select">
+            <option value="small">Small</option>
+            <option value="medium" selected>Medium</option>
+            <option value="large">Large</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="actions-section">
+        <button id="openSettings" class="btn btn-secondary">Advanced Settings</button>
+        <button id="resetSettings" class="btn btn-danger">Reset to Default</button>
+      </div>
+    </main>
+
+    <footer class="popup-footer">
+      <p>Press <kbd>Ctrl+Shift+P</kbd> to toggle module</p>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html> 

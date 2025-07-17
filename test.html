@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nitro Prompts Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        .test-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #5a6fd8;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 Nitro Prompts Test Page</h1>
+    
+    <div class="test-section">
+        <h2>Extension Status</h2>
+        <div id="extensionStatus" class="status">Checking extension status...</div>
+        <button class="test-button" onclick="checkExtension()">Check Extension</button>
+        <button class="test-button" onclick="testToggle()">Test Toggle</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Content</h2>
+        <p>This is a test page for the Nitro Prompts extension. If the extension is working correctly, you should see a floating prompt module when you enable it from the extension popup.</p>
+        
+        <h3>GitHub Repository Example</h3>
+        <p>This page simulates a GitHub repository page to test context-aware prompts.</p>
+        
+        <h3>Technical Article Example</h3>
+        <p>This page also simulates a technical article to test different prompt types.</p>
+    </div>
+    
+    <div class="test-section">
+        <h2>Debug Information</h2>
+        <div id="debugInfo">Loading debug information...</div>
+        <button class="test-button" onclick="refreshDebug()">Refresh Debug Info</button>
+    </div>
+
+    <script>
+        function checkExtension() {
+            const statusDiv = document.getElementById('extensionStatus');
+            
+            // Check if the Nitro Prompts module exists on the page
+            const module = document.getElementById('nitro-prompts-module');
+            if (module) {
+                statusDiv.className = 'status success';
+                statusDiv.textContent = '✅ Extension detected and module loaded!';
+            } else {
+                // Try to communicate with the extension
+                if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+                    chrome.runtime.sendMessage({action: 'test'}, function(response) {
+                        if (chrome.runtime.lastError) {
+                            statusDiv.className = 'status error';
+                            statusDiv.textContent = '❌ Extension installed but content script not loaded';
+                        } else {
+                            statusDiv.className = 'status success';
+                            statusDiv.textContent = '✅ Extension communication working!';
+                        }
+                    });
+                } else {
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = '❌ Extension not detected';
+                }
+            }
+        }
+        
+        function testToggle() {
+            const statusDiv = document.getElementById('extensionStatus');
+            
+            // Try to send a toggle message to the content script
+            if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+                chrome.runtime.sendMessage({action: 'toggleModule'}, function(response) {
+                    if (chrome.runtime.lastError) {
+                        statusDiv.className = 'status error';
+                        statusDiv.textContent = '❌ Toggle failed - content script not ready';
+                    } else {
+                        statusDiv.className = 'status success';
+                        statusDiv.textContent = '✅ Toggle command sent successfully!';
+                    }
+                });
+            } else {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = '❌ Extension not available for toggle';
+            }
+        }
+        
+        function refreshDebug() {
+            const debugDiv = document.getElementById('debugInfo');
+            
+            const debugInfo = {
+                userAgent: navigator.userAgent,
+                url: window.location.href,
+                title: document.title,
+                chromeAvailable: typeof chrome !== 'undefined',
+                chromeRuntime: typeof chrome !== 'undefined' && !!chrome.runtime,
+                extensionId: typeof chrome !== 'undefined' && chrome.runtime ? chrome.runtime.id : 'N/A',
+                moduleExists: !!document.getElementById('nitro-prompts-module'),
+                moduleVisible: document.getElementById('nitro-prompts-module')?.style.display !== 'none',
+                timestamp: new Date().toISOString()
+            };
+            
+            debugDiv.innerHTML = '<pre>' + JSON.stringify(debugInfo, null, 2) + '</pre>';
+        }
+        
+        // Auto-check extension on load
+        window.addEventListener('load', function() {
+            checkExtension();
+            refreshDebug();
+            
+            // Check again after a delay to catch late-loading content scripts
+            setTimeout(() => {
+                checkExtension();
+                refreshDebug();
+            }, 2000);
+        });
+    </script>
+</body>
+</html> 

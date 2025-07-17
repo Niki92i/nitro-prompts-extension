@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nitro Prompts - Advanced Settings</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <div class="settings-container">
+    <header class="settings-header">
+      <h1>🚀 Nitro Prompts</h1>
+      <p>Advanced Settings & Customization</p>
+    </header>
+
+    <main class="settings-main">
+      <div class="settings-section">
+        <h2>Intelligence Configuration</h2>
+        
+        <div class="setting-group">
+          <label for="aiModel">AI Model:</label>
+          <select id="aiModel" class="setting-select">
+            <option value="gpt-4">GPT-4 (Most Advanced)</option>
+            <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Balanced)</option>
+            <option value="claude-3">Claude 3 (Analytical)</option>
+            <option value="custom">Custom API</option>
+          </select>
+        </div>
+
+        <div class="setting-group">
+          <label for="temperature">Creativity Level:</label>
+          <div class="range-container">
+            <input type="range" id="temperature" min="0" max="100" value="70" class="setting-range">
+            <span id="temperatureValue">70%</span>
+          </div>
+          <small>Higher values = more creative, Lower values = more focused</small>
+        </div>
+
+        <div class="setting-group">
+          <label for="maxTokens">Response Length:</label>
+          <select id="maxTokens" class="setting-select">
+            <option value="100">Short (100 tokens)</option>
+            <option value="250" selected>Medium (250 tokens)</option>
+            <option value="500">Long (500 tokens)</option>
+            <option value="1000">Very Long (1000 tokens)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h2>Custom Prompts</h2>
+        <p class="section-description">Create custom prompts for specific websites or use cases</p>
+        
+        <div class="custom-prompts-container">
+          <div class="prompt-templates">
+            <h3>Prompt Templates</h3>
+            <div class="template-grid">
+              <button class="template-btn" data-template="analysis">📊 Analysis</button>
+              <button class="template-btn" data-template="summary">📝 Summary</button>
+              <button class="template-btn" data-template="question">❓ Question</button>
+              <button class="template-btn" data-template="improvement">⚡ Improvement</button>
+              <button class="template-btn" data-template="comparison">⚖️ Comparison</button>
+              <button class="template-btn" data-template="custom">✏️ Custom</button>
+            </div>
+          </div>
+
+          <div class="prompt-editor">
+            <label for="customPrompt">Custom Prompt Template:</label>
+            <textarea id="customPrompt" placeholder="Enter your custom prompt template. Use {title}, {url}, {type} as variables." rows="6"></textarea>
+            
+            <div class="prompt-variables">
+              <h4>Available Variables:</h4>
+              <div class="variable-list">
+                <code>{title}</code> - Page title
+                <code>{url}</code> - Page URL
+                <code>{type}</code> - Page type
+                <code>{domain}</code> - Website domain
+                <code>{content}</code> - Page content (first 1000 chars)
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h2>Website-Specific Rules</h2>
+        <p class="section-description">Set different prompts for specific websites</p>
+        
+        <div class="website-rules">
+          <div class="rule-item">
+            <input type="text" placeholder="Domain (e.g., github.com)" class="domain-input">
+            <select class="prompt-type-select">
+              <option value="default">Default Prompt</option>
+              <option value="custom">Custom Prompt</option>
+              <option value="template">Template</option>
+            </select>
+            <button class="remove-rule-btn">×</button>
+          </div>
+          
+          <button id="addRule" class="btn btn-secondary">+ Add Website Rule</button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h2>Appearance & Behavior</h2>
+        
+        <div class="setting-group">
+          <label for="defaultPosition">Default Position:</label>
+          <select id="defaultPosition" class="setting-select">
+            <option value="top-right">Top Right</option>
+            <option value="top-left">Top Left</option>
+            <option value="bottom-right">Bottom Right</option>
+            <option value="bottom-left">Bottom Left</option>
+            <option value="center">Center</option>
+          </select>
+        </div>
+
+        <div class="setting-group">
+          <label for="autoShow">Auto-show on page load:</label>
+          <label class="toggle-label">
+            <input type="checkbox" id="autoShow" class="toggle-input">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-group">
+          <label for="rememberPosition">Remember position:</label>
+          <label class="toggle-label">
+            <input type="checkbox" id="rememberPosition" class="toggle-input" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h2>Keyboard Shortcuts</h2>
+        
+        <div class="shortcuts-list">
+          <div class="shortcut-item">
+            <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd>
+            <span>Toggle Prompt Module</span>
+          </div>
+          <div class="shortcut-item">
+            <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>C</kbd>
+            <span>Copy Current Prompt</span>
+          </div>
+          <div class="shortcut-item">
+            <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd>
+            <span>Refresh Prompt</span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="settings-footer">
+      <div class="action-buttons">
+        <button id="saveSettings" class="btn btn-primary">Save Settings</button>
+        <button id="resetSettings" class="btn btn-danger">Reset to Default</button>
+        <button id="exportSettings" class="btn btn-secondary">Export Settings</button>
+        <button id="importSettings" class="btn btn-secondary">Import Settings</button>
+      </div>
+    </footer>
+  </div>
+
+  <script src="settings.js"></script>
+</body>
+</html> 

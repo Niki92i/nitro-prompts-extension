@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nitro Prompts - AI-Powered Browser Extension</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 60px;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: start;
+        }
+
+        .download-section {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .download-section h2 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .download-section p {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .download-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .version-info {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #999;
+        }
+
+        .features-section {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .features-section h2 {
+            font-size: 2rem;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .feature-list {
+            list-style: none;
+        }
+
+        .feature-list li {
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .feature-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 20px;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .feature-text {
+            flex: 1;
+        }
+
+        .feature-text h3 {
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .feature-text p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .installation-steps {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-top: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .installation-steps h2 {
+            font-size: 2rem;
+            margin-bottom: 30px;
+            color: #333;
+            text-align: center;
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+
+        .step {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .step-number {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .step h3 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .step p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 60px;
+            opacity: 0.8;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Nitro Prompts</h1>
+            <p>AI-powered context-aware prompts for every website. Get intelligent insights and better AI responses with just one click.</p>
+        </div>
+
+        <div class="main-content">
+            <div class="download-section">
+                <h2>Download Extension</h2>
+                <p>Get the latest version of Nitro Prompts for Chrome and other Chromium-based browsers.</p>
+                
+                <a href="dist/nitro-prompts-extension.zip" class="download-btn" download>
+                    📦 Download Nitro Prompts
+                </a>
+                
+                <div class="version-info">
+                    <p>Version 1.0.0 | Chrome Extension | 2.3 MB</p>
+                    <p>Compatible with Chrome, Edge, Brave, and other Chromium browsers</p>
+                </div>
+            </div>
+
+            <div class="features-section">
+                <h2>✨ Key Features</h2>
+                <ul class="feature-list">
+                    <li>
+                        <div class="feature-icon">🧠</div>
+                        <div class="feature-text">
+                            <h3>Context-Aware Intelligence</h3>
+                            <p>Automatically detects website types and generates relevant prompts</p>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="feature-icon">🎯</div>
+                        <div class="feature-text">
+                            <h3>4 Intelligence Levels</h3>
+                            <p>Basic, Intermediate, Advanced, and Expert modes for different needs</p>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="feature-icon">🎨</div>
+                        <div class="feature-text">
+                            <h3>Customizable Interface</h3>
+                            <p>Adjust transparency, size, and position to your preference</p>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="feature-icon">⚡</div>
+                        <div class="feature-text">
+                            <h3>Real-time Updates</h3>
+                            <p>Prompts update instantly as you change settings</p>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="feature-icon">🔧</div>
+                        <div class="feature-text">
+                            <h3>Advanced Settings</h3>
+                            <p>Custom prompts, keyboard shortcuts, and more</p>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="feature-icon">🆓</div>
+                        <div class="feature-text">
+                            <h3>100% Free</h3>
+                            <p>No subscription, no ads, no data collection</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="installation-steps">
+            <h2>📋 Installation Guide</h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Download</h3>
+                    <p>Click the download button above to get the extension ZIP file</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>Extract</h3>
+                    <p>Extract the ZIP file to a folder on your computer</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Install</h3>
+                    <p>Open Chrome, go to chrome://extensions/, enable Developer mode, and click "Load unpacked"</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <h3>Enjoy</h3>
+                    <p>Click the extension icon and start generating intelligent prompts!</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>&copy; 2024 Nitro Prompts. Made with ❤️ for better AI interactions.</p>
+        </div>
+    </div>
+
+    <script>
+        // Add download tracking
+        document.querySelector('.download-btn').addEventListener('click', function() {
+            // You can add analytics tracking here
+            console.log('Download started');
+            
+            // Optional: Show download confirmation
+            setTimeout(() => {
+                alert('Download started! Check your downloads folder.');
+            }, 100);
+        });
+
+        // Add smooth scrolling for better UX
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html> 
