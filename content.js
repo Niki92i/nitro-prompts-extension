@@ -213,35 +213,79 @@ class NitroPromptsModule {
         </div>
       </div>
       <div class="module-content">
-        <div class="prompt-section">
-          <div class="prompt-header">
-            <span class="prompt-label">Context-Aware Prompt:</span>
-            <button class="refresh-btn" title="Refresh">🔄</button>
-          </div>
-          <div class="prompt-text" id="promptText">
-            Analyzing page content...
-          </div>
+        <div class="tab-navigation">
+          <button class="tab-btn active" data-tab="prompts">💬 Prompts</button>
+          <button class="tab-btn" data-tab="summary">📝 AI Summary</button>
         </div>
-        <div class="context-details">
-          <div class="context-item">
-            <span class="context-label">Type:</span>
-            <span class="context-value" id="contextType">Analyzing...</span>
+        
+        <div class="tab-content">
+          <!-- Prompts Tab -->
+          <div class="tab-pane active" id="prompts-tab">
+            <div class="prompt-section">
+              <div class="prompt-header">
+                <span class="prompt-label">Context-Aware Prompt:</span>
+                <button class="refresh-btn" title="Refresh">🔄</button>
+              </div>
+              <div class="prompt-text" id="promptText">
+                Analyzing page content...
+              </div>
+            </div>
+            <div class="context-details">
+              <div class="context-item">
+                <span class="context-label">Type:</span>
+                <span class="context-value" id="contextType">Analyzing...</span>
+              </div>
+              <div class="context-item">
+                <span class="context-label">Category:</span>
+                <span class="context-value" id="contextCategory">Analyzing...</span>
+              </div>
+              <div class="context-item">
+                <span class="context-label">Intelligence:</span>
+                <span class="context-value" id="contextIntelligence">Analyzing...</span>
+              </div>
+            </div>
+            <div class="actions-section">
+              <button class="action-btn copy-btn">📋 Copy</button>
+              <button class="action-btn customize-btn">⚙️ Customize</button>
+            </div>
+            <div class="context-info">
+              <small>Based on: <span id="contextInfo">Current page</span></small>
+            </div>
           </div>
-          <div class="context-item">
-            <span class="context-label">Category:</span>
-            <span class="context-value" id="contextCategory">Analyzing...</span>
+          
+          <!-- AI Summary Tab -->
+          <div class="tab-pane" id="summary-tab">
+            <div class="summary-section">
+              <div class="summary-header">
+                <span class="summary-label">AI Summary:</span>
+                <button class="refresh-btn summary-refresh-btn" title="Refresh Summary">🔄</button>
+              </div>
+              <div class="summary-text" id="summaryText">
+                Click refresh to generate AI summary...
+              </div>
+            </div>
+            <div class="summary-details">
+              <div class="summary-item">
+                <span class="summary-label">Length:</span>
+                <span class="summary-value" id="summaryLength">-</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">Focus:</span>
+                <span class="summary-value" id="summaryFocus">-</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">Generated:</span>
+                <span class="summary-value" id="summaryGenerated">-</span>
+              </div>
+            </div>
+            <div class="actions-section">
+              <button class="action-btn copy-summary-btn">📋 Copy</button>
+              <button class="action-btn regenerate-btn">🔄 Regenerate</button>
+            </div>
+            <div class="context-info">
+              <small>AI-powered summary of: <span id="summaryContextInfo">Current page</span></small>
+            </div>
           </div>
-          <div class="context-item">
-            <span class="context-label">Intelligence:</span>
-            <span class="context-value" id="contextIntelligence">Analyzing...</span>
-          </div>
-        </div>
-        <div class="actions-section">
-          <button class="action-btn copy-btn">📋 Copy</button>
-          <button class="action-btn customize-btn">⚙️ Customize</button>
-        </div>
-        <div class="context-info">
-          <small>Based on: <span id="contextInfo">Current page</span></small>
         </div>
       </div>
     `;
@@ -471,10 +515,22 @@ class NitroPromptsModule {
       });
     }
 
+    // Tab navigation
+    const tabButtons = this.module.querySelectorAll('.tab-btn');
+    tabButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const targetTab = button.dataset.tab;
+        this.activateTab(targetTab);
+      });
+    });
+
     // Action buttons
     const copyBtn = this.module.querySelector('.copy-btn');
     const customizeBtn = this.module.querySelector('.customize-btn');
     const refreshBtn = this.module.querySelector('.refresh-btn');
+    const copySummaryBtn = this.module.querySelector('.copy-summary-btn');
+    const regenerateBtn = this.module.querySelector('.regenerate-btn');
+    const summaryRefreshBtn = this.module.querySelector('.summary-refresh-btn');
 
     if (copyBtn) {
       copyBtn.addEventListener('click', () => {
@@ -491,6 +547,24 @@ class NitroPromptsModule {
     if (refreshBtn) {
       refreshBtn.addEventListener('click', () => {
         this.generatePrompt();
+      });
+    }
+
+    if (copySummaryBtn) {
+      copySummaryBtn.addEventListener('click', () => {
+        this.copySummary();
+      });
+    }
+
+    if (regenerateBtn) {
+      regenerateBtn.addEventListener('click', () => {
+        this.generateSummary();
+      });
+    }
+
+    if (summaryRefreshBtn) {
+      summaryRefreshBtn.addEventListener('click', () => {
+        this.generateSummary();
       });
     }
   }
@@ -586,6 +660,9 @@ class NitroPromptsModule {
     if (this.module.querySelector('#promptText').textContent === 'Analyzing page content...') {
       this.generatePrompt();
     }
+    
+    // Auto-generate summary when showing module
+    this.generateSummary();
     
     console.log('✅ Module shown - isVisible:', this.isVisible, 'enabled:', this.settings.enabled);
   }
@@ -685,6 +762,211 @@ class NitroPromptsModule {
       promptText.textContent = 'Error generating response. Please try refreshing.';
       console.error('Error generating response:', error);
     }
+  }
+
+  async generateSummary() {
+    const summaryText = this.module.querySelector('#summaryText');
+    const summaryContextInfo = this.module.querySelector('#summaryContextInfo');
+    const summaryLength = this.module.querySelector('#summaryLength');
+    const summaryFocus = this.module.querySelector('#summaryFocus');
+    const summaryGenerated = this.module.querySelector('#summaryGenerated');
+
+    if (!summaryText || !summaryContextInfo) {
+      console.warn('⚠️ Summary elements not found');
+      return;
+    }
+
+    // Show loading state
+    summaryText.textContent = '🤖 Generating AI summary...';
+    summaryLength.textContent = '-';
+    summaryFocus.textContent = '-';
+    summaryGenerated.textContent = '-';
+
+    try {
+      // Analyze current page
+      const pageInfo = this.analyzePage();
+      summaryContextInfo.textContent = pageInfo.type;
+
+      // Generate context-aware prompt for summary
+      const prompt = this.createSummaryPrompt(pageInfo);
+
+      // Get AI response if service is available
+      if (this.aiService && this.aiService.isEnabled) {
+        try {
+          summaryText.textContent = '🤖 Getting AI summary...';
+          const aiResponse = await this.aiService.getResponse(prompt, 'basic'); // Summary is typically basic
+          
+          // Clean up the response and format it nicely
+          let formattedResponse = aiResponse.trim();
+          
+          // If the response is very long, truncate it
+          if (formattedResponse.length > 1000) {
+            formattedResponse = formattedResponse.substring(0, 1000) + '...';
+          }
+          
+          summaryText.textContent = formattedResponse;
+          console.log('✅ AI summary generated for:', pageInfo.type);
+
+          // Update summary details
+          summaryLength.textContent = formattedResponse.length + ' chars';
+          summaryFocus.textContent = this.getSummaryFocus(formattedResponse);
+          summaryGenerated.textContent = new Date().toLocaleTimeString();
+          
+        } catch (aiError) {
+          console.warn('⚠️ AI service failed, showing prompt instead:', aiError.message);
+          summaryText.textContent = '❌ AI Service Error: ' + aiError.message + '\n\n' + prompt;
+          summaryLength.textContent = 'Error';
+          summaryFocus.textContent = 'N/A';
+          summaryGenerated.textContent = 'Failed';
+        }
+      } else {
+        // Fallback to showing the prompt
+        summaryText.textContent = '⚠️ AI Service not available. Please configure your Gemini API key in the extension popup.\n\n' + prompt;
+        summaryLength.textContent = 'N/A';
+        summaryFocus.textContent = 'N/A';
+        summaryGenerated.textContent = 'No AI';
+        console.log('⚠️ No AI service available, showing prompt for:', pageInfo.type);
+      }
+    } catch (error) {
+      summaryText.textContent = '❌ Error generating summary. Please try refreshing the page.';
+      summaryLength.textContent = 'Error';
+      summaryFocus.textContent = 'N/A';
+      summaryGenerated.textContent = 'Failed';
+      console.error('❌ Error generating summary:', error);
+    }
+  }
+
+  createSummaryPrompt(pageInfo) {
+    const intelligenceLevel = 'basic'; // Summary is typically basic
+    
+    // Enhanced summary templates based on page type
+    const summaryTemplates = {
+      // GitHub specific summaries
+      'github-repository': `Provide a concise summary of this GitHub repository: "${pageInfo.title}". Focus on: 1) What this project does, 2) Key technologies used, 3) Main features or purpose. Keep it under 200 words.`,
+      'github-issue': `Summarize this GitHub issue: "${pageInfo.title}". Include: 1) The problem described, 2) Current status, 3) Key points or solutions mentioned. Keep it under 150 words.`,
+      'github-pull-request': `Summarize this GitHub pull request: "${pageInfo.title}". Include: 1) What changes are being made, 2) Key improvements or fixes, 3) Impact of the changes. Keep it under 150 words.`,
+      
+      // Stack Overflow summaries
+      'stackoverflow-question': `Summarize this Stack Overflow question: "${pageInfo.title}". Include: 1) The problem being asked, 2) Key technical details, 3) What the user is trying to achieve. Keep it under 150 words.`,
+      
+      // Technical article summaries
+      'technical-article': `Summarize this technical article: "${pageInfo.title}". Include: 1) Main topic or concept, 2) Key takeaways, 3) Practical applications. Keep it under 200 words.`,
+      
+      // YouTube video summaries
+      'youtube-video': `Summarize this YouTube video: "${pageInfo.title}". Include: 1) Main topic or content, 2) Key points covered, 3) Value or insights provided. Keep it under 150 words.`,
+      
+      // Documentation summaries
+      'documentation': `Summarize this documentation: "${pageInfo.title}". Include: 1) What this documentation covers, 2) Key concepts or features, 3) Main use cases. Keep it under 200 words.`,
+      
+      // E-commerce product summaries
+      'e-commerce-product': `Summarize this product: "${pageInfo.title}". Include: 1) What this product is, 2) Key features or benefits, 3) Target audience or use case. Keep it under 150 words.`,
+      
+      // News article summaries
+      'news-article': `Summarize this news article: "${pageInfo.title}". Include: 1) Main story or event, 2) Key facts or developments, 3) Impact or significance. Keep it under 200 words.`,
+      
+      // Learning course summaries
+      'learning-course': `Summarize this learning course: "${pageInfo.title}". Include: 1) What you'll learn, 2) Course level and prerequisites, 3) Key topics covered. Keep it under 150 words.`,
+      
+      // Code playground summaries
+      'code-playground': `Summarize this code example: "${pageInfo.title}". Include: 1) What this code demonstrates, 2) Key techniques or concepts, 3) Practical applications. Keep it under 150 words.`,
+      
+      // Reddit discussion summaries
+      'reddit-discussion': `Summarize this Reddit discussion: "${pageInfo.title}". Include: 1) Main topic or question, 2) Key points from the discussion, 3) Community consensus or insights. Keep it under 150 words.`,
+      
+      // LinkedIn content summaries
+      'linkedin-post': `Summarize this LinkedIn post: "${pageInfo.title}". Include: 1) Main message or insight, 2) Professional value, 3) Key takeaways. Keep it under 100 words.`,
+      
+      // General webpage summaries
+      'general-webpage': `Summarize this webpage: "${pageInfo.title}". Include: 1) Main purpose or content, 2) Key information provided, 3) Value or relevance. Keep it under 200 words.`
+    };
+    
+    // Get the appropriate template based on page type
+    const templateKey = pageInfo.specificType === 'repository' ? 'github-repository' :
+                       pageInfo.specificType === 'issue' ? 'github-issue' :
+                       pageInfo.specificType === 'pull-request' ? 'github-pull-request' :
+                       pageInfo.specificType === 'question' ? 'stackoverflow-question' :
+                       pageInfo.specificType === 'article' ? 'technical-article' :
+                       pageInfo.specificType === 'video' ? 'youtube-video' :
+                       pageInfo.specificType === 'docs' ? 'documentation' :
+                       pageInfo.specificType === 'product' ? 'e-commerce-product' :
+                       pageInfo.specificType === 'post' ? 'news-article' :
+                       pageInfo.specificType === 'course' ? 'learning-course' :
+                       pageInfo.specificType === 'playground' ? 'code-playground' :
+                       pageInfo.specificType === 'discussion' ? 'reddit-discussion' :
+                       pageInfo.specificType === 'linkedin-post' ? 'linkedin-post' :
+                       'general-webpage';
+    
+    const template = summaryTemplates[templateKey] || summaryTemplates['general-webpage'];
+    
+    // Add context-specific enhancements
+    let prompt = template;
+    
+    if (pageInfo.keywords.length > 0) {
+      prompt += `\n\nKey topics detected: ${pageInfo.keywords.slice(0, 5).join(', ')}`;
+    }
+    
+    if (pageInfo.headings.length > 0) {
+      prompt += `\n\nMain sections: ${pageInfo.headings.slice(0, 3).join(' | ')}`;
+    }
+    
+    if (pageInfo.codeBlocks.length > 0) {
+      prompt += `\n\nThis page contains code examples that should be considered in the summary.`;
+    }
+    
+    // Add summary-specific instructions
+    prompt += `\n\nPlease provide a clear, concise summary that captures the essence of this content. Focus on the most important information that would help someone quickly understand what this page is about.`;
+    
+    return prompt;
+  }
+
+  copyPrompt() {
+    const promptText = this.module.querySelector('#promptText');
+    if (!promptText) return;
+    
+    navigator.clipboard.writeText(promptText.textContent).then(() => {
+      const btn = this.module.querySelector('.copy-btn');
+      if (btn) {
+        const originalText = btn.textContent;
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => {
+          btn.textContent = originalText;
+        }, 2000);
+      }
+    });
+  }
+
+  copySummary() {
+    const summaryText = this.module.querySelector('#summaryText');
+    if (!summaryText) return;
+
+    navigator.clipboard.writeText(summaryText.textContent).then(() => {
+      const btn = this.module.querySelector('.copy-summary-btn');
+      if (btn) {
+        const originalText = btn.textContent;
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => {
+          btn.textContent = originalText;
+        }, 2000);
+      }
+    });
+  }
+
+  openCustomizeDialog() {
+    // Open advanced settings page
+    chrome.runtime.sendMessage({ action: 'openSettings' });
+  }
+
+  getSummaryFocus(summaryContent) {
+    const keywords = summaryContent.toLowerCase().split(/\s+/).filter(word => word.length > 3);
+    const wordFreq = {};
+    keywords.forEach(word => {
+      wordFreq[word] = (wordFreq[word] || 0) + 1;
+    });
+    const sortedKeywords = Object.entries(wordFreq)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([word]) => word);
+    return sortedKeywords.join(', ');
   }
 
   analyzePage() {
@@ -985,25 +1267,28 @@ class NitroPromptsModule {
     return prompt;
   }
 
-  copyPrompt() {
-    const promptText = this.module.querySelector('#promptText');
-    if (!promptText) return;
-    
-    navigator.clipboard.writeText(promptText.textContent).then(() => {
-      const btn = this.module.querySelector('.copy-btn');
-      if (btn) {
-        const originalText = btn.textContent;
-        btn.textContent = '✅ Copied!';
-        setTimeout(() => {
-          btn.textContent = originalText;
-        }, 2000);
-      }
-    });
-  }
+  activateTab(tabId) {
+    const tabButtons = this.module.querySelectorAll('.tab-btn');
+    const tabPanes = this.module.querySelectorAll('.tab-pane');
 
-  openCustomizeDialog() {
-    // Open advanced settings page
-    chrome.runtime.sendMessage({ action: 'openSettings' });
+    tabButtons.forEach(button => {
+      button.classList.remove('active');
+    });
+    tabPanes.forEach(pane => {
+      pane.classList.remove('active');
+    });
+
+    const activeButton = this.module.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+    const activePane = this.module.querySelector(`#${tabId}-tab`);
+    
+    if (activeButton) activeButton.classList.add('active');
+    if (activePane) activePane.classList.add('active');
+    
+    // Auto-generate summary when switching to summary tab
+    if (tabId === 'summary') {
+      console.log('🔄 Auto-generating summary for summary tab...');
+      this.generateSummary();
+    }
   }
 }
 

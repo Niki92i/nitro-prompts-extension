@@ -124,6 +124,7 @@
             <h3>🔧 Fix Tools</h3>
             <button class="success" onclick="quickFix()">Quick Fix</button>
             <button class="success" onclick="forceCreateModule()">Force Create Module</button>
+            <button class="success" onclick="forceCreateModuleWithTabs()">Force Create Module with Tabs</button>
             <button class="success" onclick="forceEnable()">Force Enable</button>
             <button class="danger" onclick="resetSettings()">Reset Settings</button>
         </div>
@@ -225,6 +226,16 @@
                 updateStatus('Module force created! Check if it appears on the page.', 'success');
             } catch (error) {
                 updateStatus(`Force create failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function forceCreateModuleWithTabs() {
+            updateStatus('Force creating module with tabs...', 'info');
+            try {
+                nitroPromptsDebug.forceCreateModuleWithTabs();
+                updateStatus('Module with tabs force created! Click the tabs to test.', 'success');
+            } catch (error) {
+                updateStatus(`Force create with tabs failed: ${error.message}`, 'error');
             }
         }
 

@@ -162,6 +162,138 @@ function forceCreateAndShowModule() {
   return module;
 }
 
+// Function to force create module with tabs
+function forceCreateModuleWithTabs() {
+  console.log('🔧 Force creating module with tabs...');
+  
+  // Remove existing module if any
+  const existingModule = document.getElementById('nitro-prompts-module');
+  if (existingModule) {
+    existingModule.remove();
+    console.log('🗑️ Removed existing module');
+  }
+  
+  // Create new module with tabs
+  const module = document.createElement('div');
+  module.id = 'nitro-prompts-module';
+  module.className = 'nitro-prompts-module size-medium show';
+  module.style.cssText = `
+    position: fixed !important;
+    top: 20px !important;
+    left: 20px !important;
+    width: 320px !important;
+    height: 400px !important;
+    background: white !important;
+    border: 2px solid #667eea !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+    z-index: 10000 !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  `;
+  
+  module.innerHTML = `
+    <div class="module-header">
+      <div class="module-title">🚀 Nitro Prompts</div>
+      <div class="module-controls">
+        <button class="control-btn minimize-btn" title="Minimize">−</button>
+        <button class="control-btn close-btn" title="Close">×</button>
+      </div>
+    </div>
+    <div class="module-content">
+      <div class="tab-navigation">
+        <button class="tab-btn active" data-tab="prompts">💬 Prompts</button>
+        <button class="tab-btn" data-tab="summary">📝 AI Summary</button>
+      </div>
+      
+      <div class="tab-content">
+        <!-- Prompts Tab -->
+        <div class="tab-pane active" id="prompts-tab">
+          <div class="prompt-section">
+            <div class="prompt-header">
+              <span class="prompt-label">Context-Aware Prompt:</span>
+              <button class="refresh-btn" title="Refresh">🔄</button>
+            </div>
+            <div class="prompt-text" id="promptText">
+              Test prompt content...
+            </div>
+          </div>
+          <div class="context-details">
+            <div class="context-item">
+              <span class="context-label">Type:</span>
+              <span class="context-value" id="contextType">Test</span>
+            </div>
+          </div>
+          <div class="actions-section">
+            <button class="action-btn copy-btn">📋 Copy</button>
+            <button class="action-btn customize-btn">⚙️ Customize</button>
+          </div>
+        </div>
+        
+        <!-- AI Summary Tab -->
+        <div class="tab-pane" id="summary-tab">
+          <div class="summary-section">
+            <div class="summary-header">
+              <span class="summary-label">AI Summary:</span>
+              <button class="refresh-btn summary-refresh-btn" title="Refresh Summary">🔄</button>
+            </div>
+            <div class="summary-text" id="summaryText">
+              Test summary content...
+            </div>
+          </div>
+          <div class="summary-details">
+            <div class="summary-item">
+              <span class="summary-label">Length:</span>
+              <span class="summary-value" id="summaryLength">-</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Focus:</span>
+              <span class="summary-value" id="summaryFocus">-</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Generated:</span>
+              <span class="summary-value" id="summaryGenerated">-</span>
+            </div>
+          </div>
+          <div class="actions-section">
+            <button class="action-btn copy-summary-btn">📋 Copy</button>
+            <button class="action-btn regenerate-btn">🔄 Regenerate</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(module);
+  console.log('✅ Module with tabs force created and added to DOM');
+  
+  // Add tab functionality
+  const tabButtons = module.querySelectorAll('.tab-btn');
+  tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const targetTab = button.dataset.tab;
+      console.log('🔄 Switching to tab:', targetTab);
+      
+      // Remove active class from all tabs and panes
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      module.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+      
+      // Add active class to clicked tab and corresponding pane
+      button.classList.add('active');
+      const targetPane = module.querySelector(`#${targetTab}-tab`);
+      if (targetPane) {
+        targetPane.classList.add('active');
+        console.log('✅ Tab switched to:', targetTab);
+      } else {
+        console.error('❌ Target pane not found:', targetTab);
+      }
+    });
+  });
+  
+  return module;
+}
+
 // Function to check settings
 async function checkSettings() {
   console.log('🔍 Check 3: Settings');
@@ -383,6 +515,7 @@ window.nitroPromptsDebug = {
   checkSettings,
   forceCreateModule,
   forceCreateAndShowModule,
+  forceCreateModuleWithTabs,
   testPopupCommunication,
   checkCSS,
   checkNitroPromptsModule,
